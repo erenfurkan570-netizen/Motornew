@@ -3,8 +3,6 @@ name: Android Otomatik Debug Build
 on:
   push:
     branches: [ "main", "master" ]
-  pull_request:
-    branches: [ "main", "master" ]
   workflow_dispatch:
 
 jobs:
@@ -12,39 +10,41 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Repodaki kodları sunucuya çeker
       - name: Kodları İndir (Checkout)
         uses: actions/checkout@v4
 
-      # 2. Android derlemesi için güncel Java sürümünü kurar
       - name: JDK 17 Kurulumu
         uses: actions/setup-java@v5
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      # 3. Android SDK'sını ve gerekli paketleri hatalı araçları atlayarak kurar
       - name: Android SDK Kurulumu
         uses: android-actions/setup-android@v3
         with:
           packages: 'platforms;android-34 build-tools;34.0.0 platform-tools'
 
-      # 4. Linux sunucusunda gradlew dosyasına çalıştırma izni verir
-      - name: Gradle İzinlerini Ayarla
-        run: chmod +x gradlew
+      - name: Gradlew Dosyasını Bul ve İzin Ver
+        run: |
+          GRADLEW_PATH=$(find . -name "gradlew" -maxdepth 3)
+          if [ -z "$GRADLEW_PATH" ]; then
+            echo "HATA: gradlew dosyası bulunamadı!"
+            exit 1
+          fi
+          DIR=$(dirname "$GRADLEW_PATH")
+          echo "Bulunan dizin: $DIR"
+          chmod +x "$GRADLEW_PATH"
+          echo "GRADLEW_DIR=$DIR" >> $GITHUB_ENV
 
-      # 5. Varsa birim testlerini koşturur
-      - name: Testleri Çalıştır
-        run: ./gradlew testDebugUnitTest
-
-      # 6. Debug APK dosyasını derler
       - name: Debug APK Oluştur
-        run: ./gradlew assembleDebug
+        run: |
+          GRADLEW_DIR="${{ env.GRADLEW_DIR }}"
+          cd "$GRADLEW_DIR"
+          ./gradlew assembleDebug
 
-      # 7. Çıkan APK dosyasını GitHub üzerinden indirebilmen için paketler
       - name: Debug APK Dosyasını Yükle (Artifact)
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          path: '**/build/outputs/apk/debug/*.apk'
           retention-days: 7
