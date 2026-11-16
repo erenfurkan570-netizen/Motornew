@@ -1,0 +1,50 @@
+name: Android Otomatik Debug Build
+
+on:
+  push:
+    branches: [ "main", "master" ] # Kod attığında otomatik çalışır
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch: # GitHub arayüzünden "Run workflow" butonuyla manuel çalıştırma sağlar
+
+jobs:
+  build:
+    runs-on: ubuntu-latest # Ücretsiz Linux sanal sunucusu
+
+    steps:
+      # 1. Repodaki kodları sunucuya çeker
+      - name: Kodları İndir (Checkout)
+        uses: actions/checkout@v4
+
+      # 2. Android derlemesi için gerekli Java sürümünü kurar (AGP 8+ için JDK 17 standarttır)
+      - name: JDK 17 Kurulumu
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle # Sonraki derlemeleri hızlandırmak için önbellek tutar
+
+      # 3. Android SDK ve gerekli araçları hazırlar
+      - name: Android SDK Kurulumu
+        uses: android-actions/setup-android@v3
+
+      # 4. Linux sunucusunda gradlew dosyasına çalıştırma izni verir (Permission denied hatasını önler)
+      - name: Gradle İzinlerini Ayarla
+        run: chmod +x gradlew
+
+      # 5. Varsa birim testlerini (Unit Tests) koşturur (İstemezsen bu adımı silebilirsin)
+      - name: Testleri Çalıştır
+        run: ./gradlew testDebugUnitTest
+
+      # 6. Debug APK dosyasını derler
+      - name: Debug APK Oluştur
+        run: ./gradlew assembleDebug
+
+      # 7. Çıkan APK dosyasını GitHub üzerinden indirebilmen için paketler
+      - name: Debug APK Dosyasını Yükle (Artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          retention-days: 7 # Dosya GitHub'da 7 gün saklanır
+
