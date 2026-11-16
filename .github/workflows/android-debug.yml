@@ -2,30 +2,32 @@ name: Android Otomatik Debug Build
 
 on:
   push:
-    branches: [ "main", "master" ] # Kod attığında otomatik çalışır
+    branches: [ "main", "master" ]
   pull_request:
     branches: [ "main", "master" ]
-  workflow_dispatch: # GitHub arayüzünden manuel çalıştırma sağlar
+  workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-latest # Ücretsiz Linux sanal sunucusu
+    runs-on: ubuntu-latest
 
     steps:
       # 1. Repodaki kodları sunucuya çeker
       - name: Kodları İndir (Checkout)
         uses: actions/checkout@v4
 
-      # 2. Android derlemesi için güncel Java sürümünü kurar (cache parametresi kaldırıldı)
+      # 2. Android derlemesi için güncel Java sürümünü kurar
       - name: JDK 17 Kurulumu
         uses: actions/setup-java@v5
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      # 3. Android SDK ve gerekli araçları hazırlar
+      # 3. Android SDK'sını ve gerekli paketleri hatalı araçları atlayarak kurar
       - name: Android SDK Kurulumu
         uses: android-actions/setup-android@v3
+        with:
+          packages: 'platforms;android-34 build-tools;34.0.0 platform-tools'
 
       # 4. Linux sunucusunda gradlew dosyasına çalıştırma izni verir
       - name: Gradle İzinlerini Ayarla
@@ -46,5 +48,3 @@ jobs:
           name: app-debug-apk
           path: app/build/outputs/apk/debug/*.apk
           retention-days: 7
-
-
